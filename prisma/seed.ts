@@ -7,6 +7,12 @@ import { ROLE_ADMIN, ROLE_USER, PLATFORM_SETTING_KEYS } from "../src/lib/constan
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "true") {
+    throw new Error(
+      "Refusing to run the demo seed in production. Set ALLOW_DEMO_SEED=true only when you explicitly intend to seed demo data."
+    );
+  }
+
   const [adminRole, userRole] = await Promise.all([
     prisma.role.upsert({
       where: { name: ROLE_ADMIN },
@@ -39,7 +45,8 @@ async function main() {
   });
   console.log(`Admin user ready: ${admin.email} (password from SEED_ADMIN_PASSWORD env var)`);
 
-  const testInvestorPasswordHash = await bcrypt.hash("Demo1234!", 12);
+  const testInvestorPassword = process.env.SEED_DEMO_USER_PASSWORD ?? "Demo1234!";
+  const testInvestorPasswordHash = await bcrypt.hash(testInvestorPassword, 12);
   await prisma.user.upsert({
     where: { email: "demo@example.com" },
     update: { name: "Test Account" },
@@ -60,7 +67,7 @@ async function main() {
       },
     },
   });
-  console.log("Test account ready: demo@example.com / Demo1234!");
+  console.log("Test account ready: demo@example.com (password from SEED_DEMO_USER_PASSWORD env var)");
 
   const plans = [
     {
@@ -162,16 +169,18 @@ async function main() {
     update: { value: "Vantage" },
     create: { key: PLATFORM_SETTING_KEYS.SITE_NAME, value: "Vantage", description: "Public site name." },
   });
+  const depositInstructions =
+    process.env.SEED_DEPOSIT_INSTRUCTIONS ??
+    "DEMO/SIMULATION ONLY\nNo real deposits are processed by this application.\n\nBank: Demo Commercial Bank\nAccount name: Vantage Demo Holdings\nAccount number: 0123456789\nRouting number: 021000021\n\nInclude your generated deposit reference in the transfer memo.\n\nThese banking details are placeholders for simulation and can be changed by an administrator in Platform Settings.";
+
   await prisma.platformSetting.upsert({
     where: { key: PLATFORM_SETTING_KEYS.DEPOSIT_INSTRUCTIONS },
     update: {
-      value:
-        "Transfer to:\nBank: First National Bank\nAccount name: Vantage Holdings Ltd\nAccount number: 0123456789\nRouting number: 021000021\n\nInclude your reference code in the transfer memo so we can match it to your account.",
+      value: depositInstructions,
     },
     create: {
       key: PLATFORM_SETTING_KEYS.DEPOSIT_INSTRUCTIONS,
-      value:
-        "Transfer to:\nBank: First National Bank\nAccount name: Vantage Holdings Ltd\nAccount number: 0123456789\nRouting number: 021000021\n\nInclude your reference code in the transfer memo so we can match it to your account.",
+      value: depositInstructions,
       description: "Shown on the user deposit page.",
     },
   });
