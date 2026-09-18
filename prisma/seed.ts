@@ -171,7 +171,7 @@ async function main() {
   });
   const depositInstructions =
     process.env.SEED_DEPOSIT_INSTRUCTIONS ??
-    "DEMO/SIMULATION ONLY\nNo real deposits are processed by this application.\nUse the admin deposit workflow to simulate an approved deposit.";
+    "DEMO/SIMULATION ONLY\nNo real deposits are processed by this application.\n\nBank: Demo Commercial Bank\nAccount name: Vantage Demo Holdings\nAccount number: 0123456789\nRouting number: 021000021\n\nInclude your generated deposit reference in the transfer memo.\n\nThese banking details are placeholders for simulation and can be changed by an administrator in Platform Settings.";
 
   await prisma.platformSetting.upsert({
     where: { key: PLATFORM_SETTING_KEYS.DEPOSIT_INSTRUCTIONS },
