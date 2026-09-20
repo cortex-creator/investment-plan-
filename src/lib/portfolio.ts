@@ -58,11 +58,23 @@ export async function getPortfolioOverview(userId: string) {
 }
 
 /**
- * Derives a portfolio-value-over-time series from the user's own completed
- * transaction history (no fabricated data): running balance = cash + sum of
- * currently-active investment principal contributed so far.
+ * Returns true portfolio valuation history from daily market-aware snapshots.
+ * Falls back to transaction-derived history until the scheduled snapshot job
+ * has produced enough points.
  */
 export async function getPortfolioHistory(userId: string) {
+  const snapshots = await prisma.portfolioSnapshot.findMany({
+    where: { userId },
+    orderBy: { capturedAt: "asc" },
+  });
+
+  if (snapshots.length >= 2) {
+    return snapshots.map((snapshot) => ({
+      date: snapshot.capturedAt.toISOString(),
+      value: toNumber(snapshot.totalValue),
+    }));
+  }
+
   const [transactions, closedTrades] = await Promise.all([
     prisma.transaction.findMany({
       where: { userId, status: "COMPLETED" },
@@ -82,34 +94,33 @@ export async function getPortfolioHistory(userId: string) {
     switch (tx.type) {
       case "DEPOSIT":
       case "RETURN":
+      case "ADJUSTMENT":
         events.push({ date: tx.createdAt, delta: amount });
         break;
       case "WITHDRAWAL":
         events.push({ date: tx.createdAt, delta: -amount });
         break;
-      case "ADJUSTMENT":
-        events.push({ date: tx.createdAt, delta: amount });
-        break;
       case "INVESTMENT":
-        // moves cash into an investment; total portfolio value is unchanged.
         break;
     }
   }
 
-  // Opening a paper trade moves cash into the position (no net change).
-  // Closing one realizes the gain/loss back into cash.
-  for (const t of closedTrades) {
-    if (!t.closedAt || t.pnl === null) continue;
-    events.push({ date: t.closedAt, delta: toNumber(t.pnl) });
+  for (const trade of closedTrades) {
+    if (!trade.closedAt || trade.pnl === null) continue;
+    events.push({ date: trade.closedAt, delta: toNumber(trade.pnl) });
   }
 
   events.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   let running = 0;
   const points: { date: string; value: number }[] = [];
-  for (const e of events) {
-    running += e.delta;
-    points.push({ date: e.date.toISOString(), value: Math.max(0, running) });
+
+  for (const event of events) {
+    running += event.delta;
+    points.push({
+      date: event.date.toISOString(),
+      value: Math.max(0, running),
+    });
   }
 
   return points;
