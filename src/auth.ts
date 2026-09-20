@@ -1,42 +1,30 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-
-import { authConfig } from "@/lib/auth.config";
 import { prisma } from "@/lib/prisma";
-import { loginSchema } from "@/lib/validation/auth";
+import { neonAuth } from "@/lib/auth/server";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  providers: [
-    Credentials({
-      credentials: {
-        email: {},
-        password: {},
-      },
-      async authorize(rawCredentials) {
-        const parsed = loginSchema.safeParse(rawCredentials);
-        if (!parsed.success) return null;
+export async function auth() {
+  const result = await neonAuth.getSession();
+  const neonUser = result?.session?.user ?? result?.user;
 
-        const { email, password } = parsed.data;
+  if (!neonUser?.email) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: email.toLowerCase() },
-          include: { role: true },
-        });
+  const user = await prisma.user.findUnique({
+    where: { email: neonUser.email.toLowerCase() },
+    include: { role: true },
+  });
 
-        if (!user || !user.isActive) return null;
+  if (!user || !user.isActive) return null;
 
-        const passwordMatches = await bcrypt.compare(password, user.passwordHash);
-        if (!passwordMatches) return null;
+  return {
+    user: {
+      id: user.id,
+      name: user.name || neonUser.name || null,
+      email: user.email,
+      image: user.image ?? neonUser.image ?? null,
+      role: user.role.name,
+    },
+  };
+}
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role.name,
-        };
-      },
-    }),
-  ],
-});
+export async function signOut() {
+  return neonAuth.signOut();
+}
