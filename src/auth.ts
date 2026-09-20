@@ -3,7 +3,7 @@ import { neonAuth } from "@/lib/auth/server";
 
 export async function auth() {
   const result = await neonAuth.getSession();
-  const neonUser = result?.session?.user ?? result?.user;
+  const neonUser = result?.data?.user;
 
   if (!neonUser?.email) return null;
 
