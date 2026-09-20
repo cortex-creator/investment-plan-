@@ -1,11 +1,10 @@
 import { createNeonAuth } from "@neondatabase/auth/next/server";
 
-const baseUrl = process.env.NEON_AUTH_BASE_URL;
-const cookieSecret = process.env.NEON_AUTH_COOKIE_SECRET || process.env.AUTH_SECRET;
+const baseUrl =
+  process.env.NEON_AUTH_BASE_URL ||
+  "https://ep-super-tree-b5erkgh7.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth";
 
-if (!baseUrl) {
-  throw new Error("NEON_AUTH_BASE_URL is not configured.");
-}
+const cookieSecret = process.env.NEON_AUTH_COOKIE_SECRET || process.env.AUTH_SECRET;
 
 if (!cookieSecret) {
   throw new Error("NEON_AUTH_COOKIE_SECRET or AUTH_SECRET is not configured.");
