@@ -22,7 +22,7 @@ export function AssetPriceList({ assets }: { assets: Asset[] }) {
               <p className="text-xs text-muted">{asset.name}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium text-foreground">{formatCurrency(price)}</p>
+              <p className="text-sm font-medium text-foreground">{formatCurrency(price, { currency: asset.currency })}</p>
               <p className={cn("text-xs font-medium", positive ? "text-success" : "text-danger")}>
                 {positive ? "+" : ""}
                 {change.toFixed(2)}%
