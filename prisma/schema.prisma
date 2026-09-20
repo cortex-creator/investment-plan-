@@ -144,6 +144,7 @@ enum AssetType {
   CRYPTO
   COMMODITY
   INDEX
+  FOREX
 }
 
 model Asset {
@@ -152,14 +153,24 @@ model Asset {
   name   String
   type   AssetType @default(STOCK)
 
-  price         Decimal @db.Decimal(14, 4) // demo price
-  previousPrice Decimal @db.Decimal(14, 4) // demo price at previous tick, for % change display
+  price         Decimal @db.Decimal(14, 4) // latest market/demo price
+  previousPrice Decimal @db.Decimal(14, 4) // previous price for % change display
+
+  // External market-data metadata. Null means the asset is still admin/simulation managed.
+  externalSymbol String?
+  externalId     String?
+  currency       String   @default("USD")
+  marketCap      Decimal? @db.Decimal(20, 2)
+  volume24h      Decimal? @db.Decimal(20, 2)
+  dataSource     String?
+  lastFetchedAt  DateTime?
 
   isActive Boolean @default(true)
 
   marketEvents MarketEvent[]
   candles      PriceCandle[]
   paperTrades  PaperTrade[]
+  portfolioSnapshots PortfolioSnapshot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,7 +193,11 @@ model PriceCandle {
 
   createdAt DateTime @default(now())
 
+  volume     Decimal? @db.Decimal(20, 8)
+  dataSource String?
+
   @@index([assetId, timestamp])
+  @@index([dataSource, timestamp])
 }
 
 enum PaperTradeStatus {
@@ -240,6 +255,24 @@ model MarketEvent {
 
   @@index([assetId])
   @@index([createdAt])
+}
+
+
+// Daily snapshots used for the real portfolio-value history chart.
+model PortfolioSnapshot {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  totalValue    Decimal @db.Decimal(18, 2)
+  cashBalance   Decimal @db.Decimal(18, 2)
+  investedValue Decimal @db.Decimal(18, 2)
+  tradeValue    Decimal @db.Decimal(18, 2)
+  capturedAt    DateTime @default(now())
+
+  @@unique([userId, capturedAt])
+  @@index([userId, capturedAt])
 }
 
 // ---------------------------------------------------------------------------
