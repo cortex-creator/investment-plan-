@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/authz";
+import { neonAuth } from "@/lib/auth/server";
 import { prisma } from "@/lib/prisma";
 import { updateProfileSchema, changePasswordSchema } from "@/lib/validation/auth";
 import type { FormState } from "@/lib/actions/auth";
@@ -24,6 +25,11 @@ export async function updateProfileAction(
     data: { name: parsed.data.name },
   });
 
+  const { error } = await neonAuth.updateUser({ name: parsed.data.name });
+  if (error) {
+    return { error: error.message || "Profile updated locally, but authentication profile update failed." };
+  }
+
   revalidatePath("/profile");
   return { success: true };
 }
@@ -43,12 +49,14 @@ export async function changePasswordAction(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-  if (!dbUser) return { error: "User not found." };
+  const result = await neonAuth.changePassword({
+    currentPassword: parsed.data.currentPassword,
+    newPassword: parsed.data.newPassword,
+    revokeOtherSessions: true,
+  });
 
-  const matches = await bcrypt.compare(parsed.data.currentPassword, dbUser.passwordHash);
-  if (!matches) {
-    return { error: "Current password is incorrect." };
+  if (result.error) {
+    return { error: result.error.message || "Unable to change your password." };
   }
 
   const newHash = await bcrypt.hash(parsed.data.newPassword, 12);
