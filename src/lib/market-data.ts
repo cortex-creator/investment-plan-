@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query";
