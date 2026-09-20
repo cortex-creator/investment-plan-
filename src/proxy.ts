@@ -1,9 +1,6 @@
-import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
+import { neonAuth } from "@/lib/auth/server";
 
-const { auth } = NextAuth(authConfig);
-
-export const proxy = auth;
+export default neonAuth.middleware({ loginUrl: "/login" });
 
 export const config = {
   matcher: [
