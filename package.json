@@ -15,7 +15,7 @@
     "db:deploy": "prisma migrate deploy"
   },
   "dependencies": {
-    "@neondatabase/auth": "^0.1.0",
+    "@neondatabase/auth": "^0.5.0-beta",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
