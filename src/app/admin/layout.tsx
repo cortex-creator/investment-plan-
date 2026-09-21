@@ -1,3 +1,4 @@
+import { auth } from "@/auth";
 import { AppShell, type NavItem } from "@/components/nav/AppShell";
 
 const navItems: NavItem[] = [
@@ -11,7 +12,8 @@ const navItems: NavItem[] = [
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const admin = { name: "Administrator", email: "Administrator" };
+  const session = await auth();
+  const admin = session?.user ?? { name: "Administrator", email: "Administrator" };
 
   return (
     <AppShell
