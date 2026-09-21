@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 
 const ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query";
 const COINGECKO_URL = "https://api.coingecko.com/api/v3";
+const YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart";
+const PUBLIC_FX_URL = "https://open.er-api.com/v6/latest/USD";
 
 type MarketPoint = {
   symbol: string;
@@ -24,7 +26,7 @@ const coinGeckoKey = process.env.COINGECKO_API_KEY;
 async function jsonFetch(url: string, headers?: HeadersInit) {
   const response = await fetch(url, {
     headers,
-    next: { revalidate: 0 },
+    cache: "no-store",
   });
   if (!response.ok) {
     throw new Error(`Market API request failed: ${response.status}`);
@@ -65,6 +67,29 @@ async function fetchAlphaStock(symbol: string): Promise<MarketPoint | null> {
   };
 }
 
+async function fetchYahooStock(symbol: string): Promise<MarketPoint | null> {
+  const url =
+    `${YAHOO_CHART_URL}/${encodeURIComponent(symbol)}?range=1d&interval=1m&events=quote`;
+  const data = await jsonFetch(url);
+  const meta = data?.chart?.result?.[0]?.meta;
+  const price = Number(meta?.regularMarketPrice ?? meta?.previousClose);
+  const previousPrice = Number(meta?.previousClose ?? price);
+
+  if (!Number.isFinite(price)) return null;
+
+  return {
+    symbol,
+    name: String(meta?.longName ?? meta?.shortName ?? symbol),
+    type: symbol === "SPY" ? "INDEX" : "STOCK",
+    price,
+    previousPrice: Number.isFinite(previousPrice) ? previousPrice : price,
+    currency: String(meta?.currency ?? "USD"),
+    externalSymbol: symbol,
+    source: "yahoo_finance",
+    timestamp: new Date(),
+  };
+}
+
 async function fetchAlphaForex(from: string, to: string): Promise<MarketPoint | null> {
   if (!alphaKey) return null;
 
@@ -91,38 +116,67 @@ async function fetchAlphaForex(from: string, to: string): Promise<MarketPoint | 
   };
 }
 
+async function fetchPublicForex(): Promise<MarketPoint | null> {
+  const data = await jsonFetch(PUBLIC_FX_URL);
+  const price = Number(data?.rates?.NGN);
+  if (!Number.isFinite(price)) return null;
+
+  return {
+    symbol: "USD/NGN",
+    name: "US Dollar to Nigerian Naira",
+    type: "FOREX",
+    price,
+    previousPrice: price,
+    currency: "NGN",
+    externalSymbol: "USDNGN",
+    source: "exchange_rate_api",
+    timestamp: new Date(),
+  };
+}
+
 async function fetchCoinGecko(): Promise<MarketPoint[]> {
-  if (!coinGeckoKey) return [];
+  const keyParam = coinGeckoKey
+    ? `&x_cg_demo_api_key=${encodeURIComponent(coinGeckoKey)}`
+    : "";
 
   const url =
     `${COINGECKO_URL}/coins/markets?vs_currency=usd&ids=bitcoin,ethereum&` +
-    `price_change_percentage=24h&x_cg_demo_api_key=${encodeURIComponent(coinGeckoKey)}`;
+    `price_change_percentage=24h${keyParam}`;
 
   const data = (await jsonFetch(url)) as Array<{
     id: string;
     symbol: string;
     name: string;
     current_price: number;
+    price_change_percentage_24h: number | null;
     market_cap: number | null;
     total_volume: number | null;
   }>;
 
   return data
     .filter((coin) => Number.isFinite(coin.current_price))
-    .map((coin) => ({
-      symbol: coin.symbol.toUpperCase(),
-      name: coin.name,
-      type: "CRYPTO",
-      price: coin.current_price,
-      previousPrice: coin.current_price,
-      currency: "USD",
-      externalSymbol: coin.symbol.toUpperCase(),
-      externalId: coin.id,
-      marketCap: coin.market_cap ?? undefined,
-      volume24h: coin.total_volume ?? undefined,
-      source: "coingecko",
-      timestamp: new Date(),
-    }));
+    .map((coin) => {
+      const change = Number(coin.price_change_percentage_24h ?? 0);
+      const previousPrice =
+        Number.isFinite(change) && change !== -100
+          ? coin.current_price / (1 + change / 100)
+          : coin.current_price;
+
+      return {
+        symbol: coin.symbol.toUpperCase(),
+        name: coin.name,
+        type: "CRYPTO" as const,
+        price: coin.current_price,
+        previousPrice,
+        currency: "USD",
+        externalSymbol: coin.symbol.toUpperCase(),
+        externalId: coin.id,
+        marketCap: coin.market_cap ?? undefined,
+        volume24h: coin.total_volume ?? undefined,
+        source: "coingecko",
+        timestamp: new Date(),
+      };
+    });
 }
 
 async function saveMarketPoint(point: MarketPoint) {
@@ -222,21 +276,22 @@ export async function syncMarketData() {
   const points: MarketPoint[] = [];
   const errors: string[] = [];
 
-  const stocks = ["AAPL", "MSFT", "TSLA"];
+  const stocks = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN", "SPY"];
+
   for (const symbol of stocks) {
     try {
-      const point = await fetchAlphaStock(symbol);
+      const point = (await fetchAlphaStock(symbol)) ?? (await fetchYahooStock(symbol));
       if (point) points.push(point);
     } catch (error) {
-      errors.push(`Alpha Vantage ${symbol}: ${error instanceof Error ? error.message : "unknown error"}`);
+      errors.push(`${symbol}: ${error instanceof Error ? error.message : "unknown error"}`);
     }
   }
 
   try {
-    const forex = await fetchAlphaForex("USD", "NGN");
+    const forex = (await fetchAlphaForex("USD", "NGN")) ?? (await fetchPublicForex());
     if (forex) points.push(forex);
   } catch (error) {
-    errors.push(`Alpha Vantage USD/NGN: ${error instanceof Error ? error.message : "unknown error"}`);
+    errors.push(`USD/NGN: ${error instanceof Error ? error.message : "unknown error"}`);
   }
 
   try {
@@ -256,7 +311,9 @@ export async function syncMarketData() {
     snapshots,
     providers: {
       alphaVantage: Boolean(alphaKey),
-      coinGecko: Boolean(coinGeckoKey),
+      yahooFinance: true,
+      exchangeRateApi: true,
+      coinGecko: true,
     },
     errors,
   };
