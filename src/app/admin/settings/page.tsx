@@ -1,9 +1,11 @@
+import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PLATFORM_SETTING_KEYS } from "@/lib/constants";
 import { SettingForm } from "./SettingForm";
 
 export default async function AdminSettingsPage() {
+  await requireAdmin();
   const settings = await prisma.platformSetting.findMany();
   const byKey = Object.fromEntries(settings.map((s) => [s.key, s.value]));
 
