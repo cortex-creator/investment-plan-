@@ -29,8 +29,14 @@ export function AppShell({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const handleSignOut = async () => {
-    await authClient.signOut();
-    window.location.href = "/";
+    try {
+      await Promise.race([
+        authClient.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 5000)),
+      ]);
+    } finally {
+      window.location.replace("/login");
+    }
   };
 
   const nav = (
