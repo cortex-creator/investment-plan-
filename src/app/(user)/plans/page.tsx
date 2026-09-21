@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
-import { bpsToPercentLabel, formatCurrency } from "@/lib/format";
+import { bpsToPercentLabel, formatCurrency, toNumber } from "@/lib/format";
 
 const riskVariant: Record<string, "success" | "warning" | "danger"> = {
   LOW: "success",
@@ -24,11 +24,7 @@ export default async function PlansPage() {
   ]);
 
   const balance = portfolio ? toNumber(portfolio.cashBalance) : 0;
-  const eligiblePlans = plans.filter((plan) => {
-    const min = toNumber(plan.minAmount);
-    const max = plan.maxAmount ? toNumber(plan.maxAmount) : Number.POSITIVE_INFINITY;
-    return balance >= min && balance >= Math.min(min, max);
-  });
+
 
   return (
     <div className="space-y-6">
@@ -38,14 +34,13 @@ export default async function PlansPage() {
         <p className="mt-2 text-sm font-medium text-foreground">Available balance: {formatCurrency(balance)}</p>
       </div>
 
-      {eligiblePlans.length === 0 ? (
+      {plans.length === 0 ? (
         <div className="rounded-lg border border-border p-6">
-          <p className="font-medium text-foreground">No plan matches your current balance yet.</p>
-          <p className="mt-1 text-sm text-muted">Increase your available balance to unlock more investment options.</p>
+          <p className="font-medium text-foreground">Investment plans are being prepared.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {eligiblePlans.map((plan) => (
+          {plans.map((plan) => (
             <Card key={plan.id} className="flex flex-col">
               <CardContent className="flex flex-1 flex-col">
                 <div className="mb-2 flex items-center justify-between">
@@ -63,9 +58,11 @@ export default async function PlansPage() {
                   {formatCurrency(plan.minAmount)} min
                   {plan.maxAmount ? ` · ${formatCurrency(plan.maxAmount)} max` : ""}
                 </p>
-                <LinkButton href={`/plans/${plan.slug}`} className="mt-4">
-                  View plan
-                </LinkButton>
+                {balance >= toNumber(plan.minAmount) ? (
+                  <LinkButton href={`/plans/${plan.slug}`} className="mt-4">Invest in plan</LinkButton>
+                ) : (
+                  <div className="mt-4 rounded-md bg-muted/40 px-3 py-2 text-center text-xs text-muted">Requires {formatCurrency(plan.minAmount)} available balance</div>
+                )}
               </CardContent>
             </Card>
           ))}
