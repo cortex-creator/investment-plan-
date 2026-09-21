@@ -28,6 +28,14 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (pathname === "/admin/login") {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-background p-4">
+        <main className="w-full max-w-md">{children}</main>
+      </div>
+    );
+  }
   const nav = (
     <nav className="flex flex-1 flex-col gap-1 p-3">
       {navItems.map((item) => {
