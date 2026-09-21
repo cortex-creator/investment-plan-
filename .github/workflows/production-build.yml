@@ -16,9 +16,21 @@ jobs:
         with:
           node-version: 20
       - run: npm install --ignore-scripts --force --no-audit --no-fund
-      - run: npm run build
+      - name: Build
+        shell: bash
+        run: |
+          set +e
+          npm run build 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          exit $status
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEON_AUTH_BASE_URL: ${{ secrets.NEON_AUTH_BASE_URL }}
           NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build-log
+          path: build.log
