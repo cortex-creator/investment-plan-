@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/authz";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -13,6 +14,7 @@ const riskVariant: Record<string, "success" | "warning" | "danger"> = {
 };
 
 export default async function AdminPlansPage() {
+  await requireAdmin();
   const plans = await prisma.investmentPlan.findMany({
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { investments: true } } },
