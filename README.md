@@ -155,3 +155,5 @@ src/
   client-side validation alone.
 - If you add real money movement in a future version, treat that as a
   ground-up security review, not an incremental change to this codebase.
+
+<!-- build diagnostic -->
