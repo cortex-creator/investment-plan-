@@ -189,6 +189,61 @@ export async function loginAction(
 }
 
 
+export async function adminLoginAction(
+  _prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const parsed = loginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+
+  if (!parsed.success) {
+    return { error: "Please enter a valid email and password." };
+  }
+
+  const normalizedEmail = parsed.data.email.toLowerCase();
+
+  try {
+    const result = await withTimeout(
+      neonAuth.signIn.email({
+        email: normalizedEmail,
+        password: parsed.data.password,
+      })
+    );
+
+    if (result.error || !result.data?.user?.email) {
+      return { error: "Invalid administrator email or password." };
+    }
+
+    const localUser = await withTimeout(
+      prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        include: { role: true },
+      })
+    );
+
+    if (!localUser?.isActive || localUser.role.name !== "ADMIN") {
+      try {
+        await neonAuth.signOut();
+      } catch (signOutError) {
+        console.error("Non-admin sign out failed", signOutError);
+      }
+      return { error: "This account is not authorized for administrator access." };
+    }
+  } catch (err) {
+    console.error("Admin login failed", err);
+    return {
+      error:
+        err instanceof Error && err.message.includes("timed out")
+          ? "The authentication service is taking too long to respond. Please try again."
+          : "Invalid administrator email or password.",
+    };
+  }
+
+  redirect("/admin");
+}
+
 export async function signOutAction() {
   try {
     await neonAuth.signOut();
