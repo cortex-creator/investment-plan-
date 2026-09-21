@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { authClient } from "@/lib/auth/client";
+import { signOutAction } from "@/lib/actions/auth";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { PLATFORM_DISCLOSURE } from "@/lib/constants";
@@ -28,17 +28,6 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const handleSignOut = async () => {
-    try {
-      await Promise.race([
-        authClient.signOut(),
-        new Promise((resolve) => setTimeout(resolve, 5000)),
-      ]);
-    } finally {
-      window.location.replace("/login");
-    }
-  };
-
   const nav = (
     <nav className="flex flex-1 flex-col gap-1 p-3">
       {navItems.map((item) => {
@@ -73,12 +62,14 @@ export function AppShell({
         <div className="border-t border-border p-4">
           <p className="truncate text-sm font-medium text-foreground">{userName}</p>
           <p className="text-xs text-muted">{roleLabel}</p>
-          <button
-            onClick={handleSignOut}
-            className="mt-3 w-full rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted cursor-pointer"
-          >
-            Sign out
-          </button>
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="mt-3 w-full rounded-lg border border-border px-3 py-1.5 text-sm text-foreground hover:bg-surface-muted cursor-pointer"
+            >
+              Sign out
+            </button>
+          </form>
           <p className="mt-3 text-[11px] leading-snug text-muted/70">{PLATFORM_DISCLOSURE}</p>
         </div>
       </aside>
@@ -113,12 +104,14 @@ export function AppShell({
                 <div className="mb-3"><ThemeToggle /></div>
                 <p className="truncate text-sm font-medium">{userName}</p>
                 <p className="text-xs text-muted">{roleLabel}</p>
-                <button
-                  onClick={handleSignOut}
-                  className="mt-3 w-full rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-muted cursor-pointer"
-                >
-                  Sign out
-                </button>
+                <form action={signOutAction}>
+                  <button
+                    type="submit"
+                    className="mt-3 w-full rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-muted cursor-pointer"
+                  >
+                    Sign out
+                  </button>
+                </form>
               </div>
             </div>
           </div>
