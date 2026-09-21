@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth/client";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { PLATFORM_DISCLOSURE } from "@/lib/constants";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export type NavItem = {
   href: string;
@@ -57,10 +58,10 @@ export function AppShell({
 
   return (
     <div className="flex min-h-0 flex-1">
-      {/* Desktop sidebar */}
       <aside className="hidden w-60 flex-col border-r border-border bg-surface md:flex">
-        <div className="flex items-center gap-2 border-b border-border px-4 py-4">
+        <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <span className="text-base font-semibold text-foreground">{brandLabel}</span>
+          <ThemeToggle />
         </div>
         {nav}
         <div className="border-t border-border p-4">
@@ -76,7 +77,6 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* Mobile top bar + slide-over */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
           <button
@@ -89,6 +89,7 @@ export function AppShell({
             </svg>
           </button>
           <span className="text-sm font-semibold">{brandLabel}</span>
+          <ThemeToggle />
         </div>
 
         {mobileOpen && (
@@ -103,6 +104,7 @@ export function AppShell({
               </div>
               {nav}
               <div className="border-t border-border p-4">
+                <div className="mb-3"><ThemeToggle /></div>
                 <p className="truncate text-sm font-medium">{userName}</p>
                 <p className="text-xs text-muted">{roleLabel}</p>
                 <button
