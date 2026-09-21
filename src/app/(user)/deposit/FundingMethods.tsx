@@ -10,11 +10,11 @@ type Method = "bank" | "card" | "crypto";
 const methods: { id: Method; label: string; available: boolean }[] = [
   { id: "bank", label: "Bank Transfer", available: true },
   { id: "card", label: "Debit / Credit Card", available: false },
-  { id: "crypto", label: "Crypto", available: false },
+  { id: "crypto", label: "Bitcoin", available: true },
 ];
 
 export function FundingMethods({ instructions }: { instructions: string }) {
-  const [active, setActive] = useState<Method>("bank");
+  const [active, setActive] = useState<Method>("crypto");
 
   return (
     <Card>
@@ -28,7 +28,9 @@ export function FundingMethods({ instructions }: { instructions: string }) {
               disabled={!m.available}
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
-                active === m.id ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+                active === m.id
+                  ? "bg-surface text-foreground shadow-sm"
+                  : "text-muted hover:text-foreground"
               )}
             >
               {m.label}
@@ -38,26 +40,25 @@ export function FundingMethods({ instructions }: { instructions: string }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {active === "bank" && (
-          <>
-            <div>
-              <p className="mb-2 text-sm font-medium text-foreground">Transfer instructions</p>
-              <p className="whitespace-pre-line rounded-lg border border-border bg-surface-muted p-4 text-sm text-muted">
-                {instructions}
-              </p>
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-medium text-foreground">
-                Submit your transfer details
-              </p>
-              <p className="mb-3 text-xs text-muted">
-                Once you&apos;ve sent the transfer, let us know the amount below. We&apos;ll confirm
-                it and credit your balance once it&apos;s received.
-              </p>
-              <DepositForm />
-            </div>
-          </>
-        )}
+        <div>
+          <p className="mb-2 text-sm font-medium text-foreground">
+            {active === "crypto" ? "Bitcoin payment instructions" : "Transfer instructions"}
+          </p>
+          <p className="whitespace-pre-line rounded-lg border border-border bg-surface-muted p-4 text-sm text-muted">
+            {instructions}
+          </p>
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-medium text-foreground">
+            Submit your transfer details
+          </p>
+          <p className="mb-3 text-xs text-muted">
+            {active === "crypto"
+              ? "Send BTC to the address above, then enter the USD value of the transfer below. The request remains pending until it is manually verified."
+              : "Once you&apos;ve sent the transfer, let us know the amount below. We&apos;ll confirm it and credit your balance once it&apos;s received."}
+          </p>
+          <DepositForm />
+        </div>
       </CardContent>
     </Card>
   );
