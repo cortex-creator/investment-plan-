@@ -70,21 +70,21 @@ async function main() {
   console.log("Test account ready: demo@example.com (password from SEED_DEMO_USER_PASSWORD env var)");
 
   const plans = [
-    { name: "Starter 30", slug: "starter-30", description: "Short-term entry plan for smaller balances.", minAmount: 100, maxAmount: 999, returnRateBps: 400, durationDays: 30, riskLevel: "LOW" as const },
-    { name: "Starter 60", slug: "starter-60", description: "Flexible 60-day plan for growing balances.", minAmount: 100, maxAmount: 2499, returnRateBps: 550, durationDays: 60, riskLevel: "LOW" as const },
-    { name: "Starter 90", slug: "starter-90", description: "Longer starter term with a higher configured return.", minAmount: 250, maxAmount: 4999, returnRateBps: 700, durationDays: 90, riskLevel: "LOW" as const },
-    { name: "Balanced 30", slug: "balanced-30", description: "Short balanced plan for investors seeking a medium-risk option.", minAmount: 500, maxAmount: 4999, returnRateBps: 600, durationDays: 30, riskLevel: "MEDIUM" as const },
-    { name: "Balanced 60", slug: "balanced-60", description: "Balanced 60-day investment option.", minAmount: 500, maxAmount: 9999, returnRateBps: 800, durationDays: 60, riskLevel: "MEDIUM" as const },
-    { name: "Growth 90", slug: "growth-90", description: "90-day growth plan for medium balances.", minAmount: 1000, maxAmount: 24999, returnRateBps: 900, durationDays: 90, riskLevel: "MEDIUM" as const },
-    { name: "Growth 120", slug: "growth-120", description: "Four-month growth option for investors with more capital.", minAmount: 2500, maxAmount: 49999, returnRateBps: 1100, durationDays: 120, riskLevel: "MEDIUM" as const },
-    { name: "Growth 180", slug: "growth-180", description: "Six-month growth plan for longer-term goals.", minAmount: 5000, maxAmount: 99999, returnRateBps: 1300, durationDays: 180, riskLevel: "MEDIUM" as const },
-    { name: "Premium 90", slug: "premium-90", description: "Higher-return premium option with a shorter commitment.", minAmount: 5000, maxAmount: 49999, returnRateBps: 1200, durationDays: 90, riskLevel: "HIGH" as const },
-    { name: "Premium 180", slug: "premium-180", description: "Premium six-month option for larger balances.", minAmount: 10000, maxAmount: 249999, returnRateBps: 1600, durationDays: 180, riskLevel: "HIGH" as const },
-    { name: "Premium 270", slug: "premium-270", description: "Nine-month premium investment option.", minAmount: 25000, maxAmount: 499999, returnRateBps: 1900, durationDays: 270, riskLevel: "HIGH" as const },
-    { name: "Premium 365", slug: "premium-365", description: "One-year premium option for long-term capital.", minAmount: 50000, maxAmount: null, returnRateBps: 2200, durationDays: 365, riskLevel: "HIGH" as const },
-    { name: "Wealth 180", slug: "wealth-180", description: "High-balance wealth plan with a 180-day term.", minAmount: 100000, maxAmount: 999999, returnRateBps: 1800, durationDays: 180, riskLevel: "HIGH" as const },
-    { name: "Wealth 365", slug: "wealth-365", description: "Long-term wealth plan for substantial balances.", minAmount: 250000, maxAmount: null, returnRateBps: 2500, durationDays: 365, riskLevel: "HIGH" as const },
-    { name: "Elite 365", slug: "elite-365", description: "High-value annual investment option for qualifying balances.", minAmount: 1000000, maxAmount: null, returnRateBps: 2800, durationDays: 365, riskLevel: "HIGH" as const },
+    { name: "Starter 30", slug: "starter-30", description: "Short-term entry plan for smaller balances.", minAmount: 10, maxAmount: 99, returnRateBps: 400, durationDays: 30, riskLevel: "LOW" as const },
+    { name: "Starter 60", slug: "starter-60", description: "Flexible 60-day plan for growing balances.", minAmount: 10, maxAmount: 249, returnRateBps: 550, durationDays: 60, riskLevel: "LOW" as const },
+    { name: "Starter 90", slug: "starter-90", description: "Longer starter term with a higher configured return.", minAmount: 25, maxAmount: 499, returnRateBps: 700, durationDays: 90, riskLevel: "LOW" as const },
+    { name: "Balanced 30", slug: "balanced-30", description: "Short balanced plan for smaller and medium balances.", minAmount: 50, maxAmount: 499, returnRateBps: 600, durationDays: 30, riskLevel: "MEDIUM" as const },
+    { name: "Balanced 60", slug: "balanced-60", description: "Balanced 60-day investment option.", minAmount: 50, maxAmount: 999, returnRateBps: 800, durationDays: 60, riskLevel: "MEDIUM" as const },
+    { name: "Growth 90", slug: "growth-90", description: "90-day growth plan for medium balances.", minAmount: 100, maxAmount: 2499, returnRateBps: 900, durationDays: 90, riskLevel: "MEDIUM" as const },
+    { name: "Growth 120", slug: "growth-120", description: "Four-month growth option for investors with more capital.", minAmount: 250, maxAmount: 4999, returnRateBps: 1100, durationDays: 120, riskLevel: "MEDIUM" as const },
+    { name: "Growth 180", slug: "growth-180", description: "Six-month growth plan for longer-term goals.", minAmount: 500, maxAmount: 9999, returnRateBps: 1300, durationDays: 180, riskLevel: "MEDIUM" as const },
+    { name: "Premium 90", slug: "premium-90", description: "Premium 90-day option for larger balances.", minAmount: 500, maxAmount: 4999, returnRateBps: 1200, durationDays: 90, riskLevel: "HIGH" as const },
+    { name: "Premium 180", slug: "premium-180", description: "Premium six-month option for larger balances.", minAmount: 1000, maxAmount: 24999, returnRateBps: 1600, durationDays: 180, riskLevel: "HIGH" as const },
+    { name: "Premium 270", slug: "premium-270", description: "Nine-month premium investment option.", minAmount: 2500, maxAmount: 49999, returnRateBps: 1900, durationDays: 270, riskLevel: "HIGH" as const },
+    { name: "Premium 365", slug: "premium-365", description: "One-year premium option for long-term capital.", minAmount: 5000, maxAmount: null, returnRateBps: 2200, durationDays: 365, riskLevel: "HIGH" as const },
+    { name: "Wealth 180", slug: "wealth-180", description: "High-balance wealth plan with a 180-day term.", minAmount: 10000, maxAmount: 99999, returnRateBps: 1800, durationDays: 180, riskLevel: "HIGH" as const },
+    { name: "Wealth 365", slug: "wealth-365", description: "Long-term wealth plan for substantial balances.", minAmount: 25000, maxAmount: null, returnRateBps: 2500, durationDays: 365, riskLevel: "HIGH" as const },
+    { name: "Elite 365", slug: "elite-365", description: "High-value annual investment option for qualifying balances.", minAmount: 100000, maxAmount: null, returnRateBps: 2800, durationDays: 365, riskLevel: "HIGH" as const },
   ];
 
   for (const plan of plans) {
