@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/authz";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -7,7 +8,8 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { AdjustBalanceForm } from "./AdjustBalanceForm";
 import { ToggleActiveButton } from "./ToggleActiveButton";
 
-export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminUserDetailPage({
+  await requireAdmin(); params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const user = await prisma.user.findUnique({
