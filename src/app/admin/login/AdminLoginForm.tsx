@@ -5,6 +5,7 @@ import { adminLoginAction, type FormState } from "@/lib/actions/auth";
 import { Label, Input } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import Link from "next/link";
 
 const initialState: FormState = {};
 
@@ -25,6 +26,11 @@ export function AdminLoginForm() {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Authenticating…" : "Administrator sign in"}
       </Button>
+      <div className="text-center">
+        <Link href="/admin/reset-password" className="text-sm underline underline-offset-4">
+          Forgot administrator password?
+        </Link>
+      </div>
     </form>
   );
 }
