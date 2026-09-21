@@ -17,7 +17,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
 
   return (
     <AppShell
-      navItems={navItems}
+      navItems={user.role === "ADMIN" ? [{ href: "/admin", label: "Admin Control" }, ...navItems] : navItems}
       brandLabel="Vantage"
       userName={user.name ?? user.email ?? "User"}
       roleLabel="Investor account"
