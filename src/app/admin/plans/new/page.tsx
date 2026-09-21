@@ -1,8 +1,10 @@
+import { requireAdmin } from "@/lib/authz";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { createPlanAction } from "@/lib/actions/admin-plans";
 import { PlanForm } from "../PlanForm";
 
-export default function NewPlanPage() {
+export default async function NewPlanPage() {
+  await requireAdmin();
   return (
     <div className="max-w-2xl space-y-6">
       <div>
