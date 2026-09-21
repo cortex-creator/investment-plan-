@@ -25,5 +25,8 @@ export async function requireAdmin() {
   if (session.user.role !== ROLE_ADMIN) {
     redirect("/dashboard");
   }
+  if ((session.user as typeof session.user & { mustChangePassword?: boolean }).mustChangePassword) {
+    redirect("/admin/change-password");
+  }
   return session.user;
 }
