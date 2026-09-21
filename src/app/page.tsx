@@ -1,19 +1,32 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
-// This page reads live, admin-editable investment plans — never cache it statically.
 export const dynamic = "force-dynamic";
+
 import { LinkButton } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { PLATFORM_DISCLOSURE } from "@/lib/constants";
 import { bpsToPercentLabel, formatCurrency } from "@/lib/format";
 
+async function loadPlans() {
+  try {
+    return await Promise.race([
+      prisma.investmentPlan.findMany({
+        where: { isActive: true },
+        orderBy: { minAmount: "asc" },
+        take: 3,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Investment plan query timed out")), 5000)
+      ),
+    ]);
+  } catch {
+    return [];
+  }
+}
+
 export default async function Home() {
-  const plans = await prisma.investmentPlan.findMany({
-    where: { isActive: true },
-    orderBy: { minAmount: "asc" },
-    take: 3,
-  });
+  const plans = await loadPlans();
 
   return (
     <div className="flex-1 bg-background">
