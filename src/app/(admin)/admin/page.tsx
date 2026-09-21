@@ -1,20 +1,23 @@
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { formatCurrency, formatDateTime, toNumber } from "@/lib/format";
-import {
-  adjustBalance,
-  createMarketEvent,
-  sendNotification,
-  togglePlan,
-  updateInvestment,
-  updatePlan,
-  updateSetting,
-  updateTransactionStatus,
-  updateUser,
-  upsertAsset,
-} from "./actions";
+import { formatCurrency, formatDateTime, toNumber, generateReference } from "@/lib/format";
+
+function textValue(value: FormDataEntryValue | null) { return String(value ?? "").trim(); }
+function numberValue(value: FormDataEntryValue | null, fallback = 0) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
+
+async function updatePlan(formData: FormData) { "use server"; await requireAdmin(); const id=textValue(formData.get("id")); if(!id)return; const minAmount=Math.max(0,numberValue(formData.get("minAmount"))); const maxRaw=textValue(formData.get("maxAmount")); const maxAmount=maxRaw?Math.max(minAmount,numberValue(formData.get("maxAmount"))):null; const returnRate=Math.max(0,numberValue(formData.get("returnRate"))); const durationDays=Math.max(1,Math.floor(numberValue(formData.get("durationDays"),30))); await prisma.investmentPlan.update({where:{id},data:{minAmount,maxAmount,returnRateBps:Math.round(returnRate*100),durationDays,description:textValue(formData.get("description"))}}); revalidatePath("/admin"); revalidatePath("/plans"); }
+async function togglePlan(formData: FormData) { "use server"; await requireAdmin(); const id=textValue(formData.get("id")); if(!id)return; const p=await prisma.investmentPlan.findUnique({where:{id},select:{isActive:true}}); if(!p)return; await prisma.investmentPlan.update({where:{id},data:{isActive:!p.isActive}}); revalidatePath("/admin"); revalidatePath("/plans"); }
+async function updateUser(formData: FormData) { "use server"; await requireAdmin(); const id=textValue(formData.get("id")); const roleName=textValue(formData.get("role")); if(!id)return; const role=await prisma.role.findUnique({where:{name:roleName}}); if(!role)return; await prisma.user.update({where:{id},data:{isActive:textValue(formData.get("active"))==="true",roleId:role.id}}); revalidatePath("/admin"); }
+async function adjustBalance(formData: FormData) { "use server"; await requireAdmin(); const userId=textValue(formData.get("userId")); const type=textValue(formData.get("type")); const amount=Math.max(0,numberValue(formData.get("amount"))); if(!userId||amount<=0||!["DEPOSIT","WITHDRAWAL"].includes(type))return; await prisma.$transaction(async tx=>{ const p=await tx.portfolio.findUnique({where:{userId}}); if(!p)throw new Error("User portfolio not found"); const current=toNumber(p.cashBalance); if(type==="WITHDRAWAL"&&current<amount)throw new Error("Insufficient available balance"); await tx.portfolio.update({where:{userId},data:{cashBalance:type==="DEPOSIT"?current+amount:current-amount,...(type==="DEPOSIT"?{totalDeposited:{increment:amount}}:{})}}); await tx.transaction.create({data:{userId,type:type as "DEPOSIT"|"WITHDRAWAL",status:"COMPLETED",amount,description:textValue(formData.get("description"))||"Admin balance adjustment",reference:generateReference(type==="DEPOSIT"?"ADMDEP":"ADMWD")}}); }); revalidatePath("/admin"); revalidatePath("/dashboard"); revalidatePath("/portfolio"); revalidatePath("/transactions"); }
+async function updateTransactionStatus(formData: FormData) { "use server"; await requireAdmin(); const id=textValue(formData.get("id")); const status=textValue(formData.get("status")); if(!id||!["PENDING","COMPLETED","FAILED"].includes(status))return; await prisma.transaction.update({where:{id},data:{status:status as "PENDING"|"COMPLETED"|"FAILED"}}); revalidatePath("/admin"); revalidatePath("/transactions"); }
+async function updateInvestment(formData: FormData) { "use server"; await requireAdmin(); const id=textValue(formData.get("id")); const status=textValue(formData.get("status")); if(!id||!["ACTIVE","COMPLETED","CANCELLED"].includes(status))return; await prisma.userInvestment.update({where:{id},data:{status:status as "ACTIVE"|"COMPLETED"|"CANCELLED",currentValue:Math.max(0,numberValue(formData.get("currentValue"))),...(status==="COMPLETED"?{endDate:new Date()}: {})}}); revalidatePath("/admin"); revalidatePath("/portfolio"); }
+async function upsertAsset(formData: FormData) { "use server"; await requireAdmin(); const id=textValue(formData.get("id")); const symbol=textValue(formData.get("symbol")).toUpperCase(); const name=textValue(formData.get("name")); const type=textValue(formData.get("type")); const price=Math.max(0,numberValue(formData.get("price"))); if(!symbol||!name||!["STOCK","CRYPTO","COMMODITY","INDEX","FOREX"].includes(type))return; if(id){const asset=await prisma.asset.findUnique({where:{id}}); if(!asset)return; await prisma.asset.update({where:{id},data:{name,type:type as "STOCK"|"CRYPTO"|"COMMODITY"|"INDEX"|"FOREX",previousPrice:asset.price,price,isActive:textValue(formData.get("active"))==="true"}})}else{await prisma.asset.create({data:{symbol,name,type:type as "STOCK"|"CRYPTO"|"COMMODITY"|"INDEX"|"FOREX",price,previousPrice:price,isActive:true}})} revalidatePath("/admin"); revalidatePath("/dashboard"); revalidatePath("/trade"); }
+async function createMarketEvent(formData: FormData) { "use server"; await requireAdmin(); const headline=textValue(formData.get("headline")); const description=textValue(formData.get("description")); const category=textValue(formData.get("category")); if(!headline||!["RATE_CHANGE","PRICE_MOVE","ACCOUNT_ACTIVITY","PLATFORM_NEWS"].includes(category))return; const assetId=textValue(formData.get("assetId")); await prisma.marketEvent.create({data:{headline,description:description||null,category:category as "RATE_CHANGE"|"PRICE_MOVE"|"ACCOUNT_ACTIVITY"|"PLATFORM_NEWS",assetId:assetId||null,isSimulated:true}}); revalidatePath("/admin"); revalidatePath("/dashboard"); }
+async function updateSetting(formData: FormData) { "use server"; await requireAdmin(); const key=textValue(formData.get("key")); if(!key)return; const value=textValue(formData.get("value")); await prisma.platformSetting.upsert({where:{key},create:{key,value},update:{value}}); revalidatePath("/admin"); revalidatePath("/"); revalidatePath("/deposit"); }
+async function sendNotification(formData: FormData) { "use server"; await requireAdmin(); const userId=textValue(formData.get("userId")); const title=textValue(formData.get("title")); const message=textValue(formData.get("message")); const type=textValue(formData.get("type")); if(!userId||!title||!message||!["INFO","SUCCESS","WARNING","MARKET"].includes(type))return; await prisma.notification.create({data:{userId,title,message,type:type as "INFO"|"SUCCESS"|"WARNING"|"MARKET"}}); revalidatePath("/admin"); revalidatePath("/notifications"); }
 
 function Field({ name, value, type = "text", step, min }: { name: string; value?: string | number; type?: string; step?: string; min?: string }) {
   return (
