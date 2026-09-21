@@ -8,7 +8,6 @@ import { formatCurrency, toNumber } from "@/lib/format";
 import { TickControls } from "./TickControls";
 
 export default async function AdminAssetTradeControlPage({
-  await requireAdmin();
   params,
 }: {
   params: Promise<{ id: string }>;
