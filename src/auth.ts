@@ -39,6 +39,7 @@ export async function auth() {
       email: user.email,
       image: user.image ?? neonUser.image ?? null,
       role: user.role.name,
+      mustChangePassword: user.mustChangePassword,
     },
   };
 }
