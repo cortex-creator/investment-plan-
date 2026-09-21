@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -13,6 +14,7 @@ const categoryLabel: Record<string, string> = {
 };
 
 export default async function AdminMarketEventsPage() {
+  await requireAdmin();
   const [assets, events] = await Promise.all([
     prisma.asset.findMany({
       select: { id: true, symbol: true, name: true },
