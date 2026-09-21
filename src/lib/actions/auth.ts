@@ -187,3 +187,14 @@ export async function loginAction(
 
   redirect(localUser.role.name === "ADMIN" ? "/admin" : "/dashboard");
 }
+
+
+export async function signOutAction() {
+  try {
+    await neonAuth.signOut();
+  } catch (err) {
+    console.error("Sign out failed", err);
+  }
+
+  redirect("/login");
+}
