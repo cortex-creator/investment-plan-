@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { toNumber } from "@/lib/format";
+import { STARTING_BALANCE } from "@/lib/constants";
 
 export async function getPortfolioOverview(userId: string) {
   const [portfolio, investments, openTrades] = await Promise.all([
@@ -57,11 +58,6 @@ export async function getPortfolioOverview(userId: string) {
   };
 }
 
-/**
- * Returns true portfolio valuation history from daily market-aware snapshots.
- * Falls back to transaction-derived history until the scheduled snapshot job
- * has produced enough points.
- */
 export async function getPortfolioHistory(userId: string) {
   const snapshots = await prisma.portfolioSnapshot.findMany({
     where: { userId },
@@ -75,7 +71,8 @@ export async function getPortfolioHistory(userId: string) {
     }));
   }
 
-  const [transactions, closedTrades] = await Promise.all([
+  const [portfolio, transactions, closedTrades] = await Promise.all([
+    prisma.portfolio.findUnique({ where: { userId } }),
     prisma.transaction.findMany({
       where: { userId, status: "COMPLETED" },
       orderBy: { createdAt: "asc" },
@@ -121,6 +118,29 @@ export async function getPortfolioHistory(userId: string) {
       date: event.date.toISOString(),
       value: Math.max(0, running),
     });
+  }
+
+  const currentValue = portfolio
+    ? toNumber(portfolio.cashBalance)
+    : STARTING_BALANCE;
+
+  if (points.length === 0) {
+    const now = new Date();
+    const previous = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return [
+      { date: previous.toISOString(), value: currentValue },
+      { date: now.toISOString(), value: currentValue },
+    ];
+  }
+
+  if (points.length === 1) {
+    const only = points[0];
+    const previous = new Date(only.date);
+    previous.setDate(previous.getDate() - 1);
+    return [
+      { date: previous.toISOString(), value: points[0].value },
+      only,
+    ];
   }
 
   return points;
