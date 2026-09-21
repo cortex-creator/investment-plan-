@@ -17,16 +17,15 @@ export type FormState = {
 const ACTION_TIMEOUT_MS = 10000;
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs = ACTION_TIMEOUT_MS): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("Request timed out. Please try again.")), timeoutMs);
+  });
+
   try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error("Request timed out. Please try again.")), timeoutMs)
-      ),
-    ]);
+    return await Promise.race([promise, timeout]);
   } finally {
-    if (timer) clearTimeout(timer);
+    clearTimeout(timer!);
   }
 }
 
@@ -43,15 +42,19 @@ async function ensureLocalUser(email: string, name: string, password?: string) {
   if (existing) {
     if (password) {
       const passwordHash = await bcrypt.hash(password, 12);
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: { name, passwordHash },
-      });
+      await withTimeout(
+        prisma.user.update({
+          where: { id: existing.id },
+          data: { name, passwordHash },
+        })
+      );
     } else if (name && existing.name !== name) {
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: { name },
-      });
+      await withTimeout(
+        prisma.user.update({
+          where: { id: existing.id },
+          data: { name },
+        })
+      );
     }
     return existing;
   }
@@ -125,7 +128,6 @@ export async function signUpAction(
     }
 
     await ensureLocalUser(normalizedEmail, name, password);
-    redirect("/dashboard");
   } catch (err) {
     console.error("Signup failed", err);
     return {
@@ -135,6 +137,8 @@ export async function signUpAction(
           : "Unable to create your account. Please try again.",
     };
   }
+
+  redirect("/dashboard");
 }
 
 export async function loginAction(
@@ -153,6 +157,7 @@ export async function loginAction(
   const { email, password } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
+  let localUser;
   try {
     const result = await withTimeout(
       neonAuth.signIn.email({
@@ -165,13 +170,11 @@ export async function loginAction(
       return { error: "Invalid email or password." };
     }
 
-    const localUser = await ensureLocalUser(
+    localUser = await ensureLocalUser(
       normalizedEmail,
       normalizedEmail.split("@")[0],
       password
     );
-
-    redirect(localUser.role.name === "ADMIN" ? "/admin" : "/dashboard");
   } catch (err) {
     console.error("Login failed", err);
     return {
@@ -181,4 +184,6 @@ export async function loginAction(
           : "Invalid email or password.",
     };
   }
+
+  redirect(localUser.role.name === "ADMIN" ? "/admin" : "/dashboard");
 }
