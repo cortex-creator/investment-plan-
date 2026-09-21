@@ -185,7 +185,7 @@ export async function loginAction(
     };
   }
 
-  redirect(localUser.role.name === "ADMIN" ? "/admin" : "/dashboard");
+  redirect(localUser.role.name === "ADMIN" ? (localUser.mustChangePassword ? "/admin/change-password" : "/admin") : "/dashboard");
 }
 
 
@@ -239,6 +239,59 @@ export async function adminLoginAction(
           ? "The authentication service is taking too long to respond. Please try again."
           : "Invalid administrator email or password.",
     };
+  }
+
+  redirect(localUser.mustChangePassword ? "/admin/change-password" : "/admin");
+}
+
+export async function changeAdminPasswordAction(
+  _prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const newPassword = String(formData.get("newPassword") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (newPassword.length < 8) {
+    return { error: "Your new password must be at least 8 characters." };
+  }
+
+  if (newPassword !== confirmPassword) {
+    return { error: "The new passwords do not match." };
+  }
+
+  try {
+    const session = await withTimeout(neonAuth.getSession());
+    const email = session?.data?.user?.email?.toLowerCase();
+    if (!email) return { error: "Your administrator session has expired. Please sign in again." };
+
+    const localUser = await withTimeout(
+      prisma.user.findUnique({ where: { email }, include: { role: true } })
+    );
+
+    if (!localUser?.isActive || localUser.role.name !== "ADMIN") {
+      return { error: "Administrator access is required." };
+    }
+
+    const result = await withTimeout(
+      neonAuth.changePassword({
+        newPassword,
+        revokeOtherSessions: true,
+      })
+    );
+
+    if (result?.error) {
+      return { error: result.error.message || "Unable to change the password." };
+    }
+
+    await withTimeout(
+      prisma.user.update({
+        where: { id: localUser.id },
+        data: { mustChangePassword: false },
+      })
+    );
+  } catch (err) {
+    console.error("Admin password change failed", err);
+    return { error: "Unable to change the password. Please try again." };
   }
 
   redirect("/admin");
