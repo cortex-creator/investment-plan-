@@ -140,7 +140,6 @@ export default async function AdminPage() {
                 </div>
                 <form action={updatePlan} className="grid gap-3 md:grid-cols-5">
                   <input type="hidden" name="id" value={plan.id} />
-                  <label className="text-xs text-muted">Min<input className="mt-1" /></label>
                   <div><p className="text-xs text-muted">Minimum amount</p><Field name="minAmount" value={toNumber(plan.minAmount)} type="number" step="0.01" min="0" /></div>
                   <div><p className="text-xs text-muted">Maximum amount</p><Field name="maxAmount" value={plan.maxAmount ? toNumber(plan.maxAmount) : ""} type="number" step="0.01" min="0" /></div>
                   <div><p className="text-xs text-muted">Return %</p><Field name="returnRate" value={plan.returnRateBps / 100} type="number" step="0.01" min="0" /></div>
@@ -177,7 +176,7 @@ export default async function AdminPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[950px] text-left text-sm">
-              <thead><tr className="border-b border-border text-xs text-muted"><th className="py-2">User</th><th>Plan</th><th>Principal</th><th>Current value</th><th>Status</th><th>Update</th></tr></thead>
+              <thead><tr className="border-b border-border text-xs text-muted"><th className="py-2">User</th><th>Plan</th><th>Principal</th><th>Controls</th><th>Created</th></tr></thead>
               <tbody>{recentInvestments.map((investment) => (
                 <tr key={investment.id} className="border-b border-border/60">
                   <td className="py-3">{investment.user.name}<div className="text-xs text-muted">{investment.user.email}</div></td><td>{investment.plan.name}</td><td>{formatCurrency(investment.principal)}</td>
