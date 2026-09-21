@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { authClient } from "@/lib/auth/client";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { PLATFORM_DISCLOSURE } from "@/lib/constants";
@@ -27,7 +27,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const handleSignOut = () => signOut({ callbackUrl: "/" });
+  const handleSignOut = async () => {\n    await authClient.signOut();\n    window.location.href = "/";\n  };
 
   const nav = (
     <nav className="flex flex-1 flex-col gap-1 p-3">
