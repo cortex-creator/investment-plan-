@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { generateReference } from "@/lib/format";
@@ -92,9 +91,9 @@ export async function adjustBalance(formData: FormData) {
     await tx.portfolio.update({
       where: { userId },
       data: {
-        cashBalance: new Prisma.Decimal(nextBalance),
+        cashBalance: nextBalance,
         ...(type === "DEPOSIT"
-          ? { totalDeposited: { increment: new Prisma.Decimal(amount) } }
+          ? { totalDeposited: { increment: amount } }
           : {}),
       },
     });
@@ -104,7 +103,7 @@ export async function adjustBalance(formData: FormData) {
         userId,
         type: type as "DEPOSIT" | "WITHDRAWAL",
         status: "COMPLETED",
-        amount: new Prisma.Decimal(amount),
+        amount: amount,
         description,
         reference: generateReference(type === "DEPOSIT" ? "ADMDEP" : "ADMWD"),
       },
@@ -143,7 +142,7 @@ export async function updateInvestment(formData: FormData) {
     where: { id },
     data: {
       status: status as "ACTIVE" | "COMPLETED" | "CANCELLED",
-      currentValue: new Prisma.Decimal(currentValue),
+      currentValue: currentValue,
       ...(status === "COMPLETED" ? { endDate: new Date() } : {}),
     },
   });
@@ -171,7 +170,7 @@ export async function upsertAsset(formData: FormData) {
         name,
         type: type as "STOCK" | "CRYPTO" | "COMMODITY" | "INDEX" | "FOREX",
         previousPrice: asset.price,
-        price: new Prisma.Decimal(price),
+        price: price,
         isActive: active,
       },
     });
@@ -181,8 +180,8 @@ export async function upsertAsset(formData: FormData) {
         symbol,
         name,
         type: type as "STOCK" | "CRYPTO" | "COMMODITY" | "INDEX" | "FOREX",
-        price: new Prisma.Decimal(price),
-        previousPrice: new Prisma.Decimal(price),
+        price: price,
+        previousPrice: price,
         isActive: true,
       },
     });
