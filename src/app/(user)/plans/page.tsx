@@ -11,23 +11,41 @@ const riskVariant: Record<string, "success" | "warning" | "danger"> = {
 };
 
 export default async function PlansPage() {
-  const plans = await prisma.investmentPlan.findMany({
-    where: { isActive: true },
-    orderBy: { minAmount: "asc" },
+  const { requireUser } = await import("@/lib/authz");
+  const { toNumber } = await import("@/lib/format");
+  const user = await requireUser();
+
+  const [plans, portfolio] = await Promise.all([
+    prisma.investmentPlan.findMany({
+      where: { isActive: true },
+      orderBy: { minAmount: "asc" },
+    }),
+    prisma.portfolio.findUnique({ where: { userId: user.id } }),
+  ]);
+
+  const balance = portfolio ? toNumber(portfolio.cashBalance) : 0;
+  const eligiblePlans = plans.filter((plan) => {
+    const min = toNumber(plan.minAmount);
+    const max = plan.maxAmount ? toNumber(plan.maxAmount) : Number.POSITIVE_INFINITY;
+    return balance >= min && balance >= Math.min(min, max);
   });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Investment Plans</h1>
-        <p className="text-sm text-muted">Choose a plan that fits your goals.</p>
+        <p className="text-sm text-muted">Choose from the plans available for your current balance.</p>
+        <p className="mt-2 text-sm font-medium text-foreground">Available balance: {formatCurrency(balance)}</p>
       </div>
 
-      {plans.length === 0 ? (
-        <p className="text-sm text-muted">No investment plans are currently available.</p>
+      {eligiblePlans.length === 0 ? (
+        <div className="rounded-lg border border-border p-6">
+          <p className="font-medium text-foreground">No plan matches your current balance yet.</p>
+          <p className="mt-1 text-sm text-muted">Increase your available balance to unlock more investment options.</p>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {plans.map((plan) => (
+          {eligiblePlans.map((plan) => (
             <Card key={plan.id} className="flex flex-col">
               <CardContent className="flex flex-1 flex-col">
                 <div className="mb-2 flex items-center justify-between">
