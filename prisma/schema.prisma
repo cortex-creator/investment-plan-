@@ -37,6 +37,7 @@ model User {
   email        String  @unique
   passwordHash String
   isActive     Boolean @default(true)
+  mustChangePassword Boolean @default(false)
   image        String?
 
   roleId String
