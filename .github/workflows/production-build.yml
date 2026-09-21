@@ -8,15 +8,41 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm install --ignore-scripts --force --no-audit --no-fund
-      - run: npm run build
+      - name: Capture production build
+        shell: bash
+        run: |
+          set +e
+          npm run build 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          echo "${status}" > build.status
+          exit 0
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEON_AUTH_BASE_URL: ${{ secrets.NEON_AUTH_BASE_URL }}
           NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      - name: Persist diagnostic log
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B build-diagnostic-log
+          git add build.log build.status
+          git commit -m "ci: persist production build diagnostic [skip ci]" || true
+          git push origin HEAD:build-diagnostic-log --force
+      - name: Fail if build failed
+        shell: bash
+        run: |
+          status=$(cat build.status)
+          if [ "${status}" != "0" ]; then
+            exit "${status}"
+          fi
