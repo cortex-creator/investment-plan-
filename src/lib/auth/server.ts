@@ -7,7 +7,7 @@ const baseUrl =
 const cookieSecret =
   process.env.NEON_AUTH_COOKIE_SECRET || process.env.AUTH_SECRET;
 
-export const neonAuth = createNeonAuth({
+export const auth = createNeonAuth({
   baseUrl,
   ...(cookieSecret
     ? {
@@ -18,3 +18,6 @@ export const neonAuth = createNeonAuth({
       }
     : {}),
 });
+
+// Backward-compatible alias for existing server actions.
+export const neonAuth = auth;
