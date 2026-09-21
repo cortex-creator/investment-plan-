@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -19,6 +20,7 @@ const statusVariant: Record<string, "success" | "warning" | "danger"> = {
 };
 
 export default async function AdminTransactionsPage() {
+  await requireAdmin();
   const [pendingDeposits, allTransactions] = await Promise.all([
     prisma.transaction.findMany({
       where: { type: "DEPOSIT", status: "PENDING" },
