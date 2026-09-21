@@ -1,16 +1,34 @@
 import { prisma } from "@/lib/prisma";
 import { neonAuth } from "@/lib/auth/server";
 
+const AUTH_TIMEOUT_MS = 5000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = AUTH_TIMEOUT_MS): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function auth() {
-  const result = await neonAuth.getSession();
+  const result = await withTimeout(neonAuth.getSession());
   const neonUser = result?.data?.user;
 
   if (!neonUser?.email) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { email: neonUser.email.toLowerCase() },
-    include: { role: true },
-  });
+  const user = await withTimeout(
+    prisma.user.findUnique({
+      where: { email: neonUser.email.toLowerCase() },
+      include: { role: true },
+    })
+  );
 
   if (!user || !user.isActive) return null;
 
