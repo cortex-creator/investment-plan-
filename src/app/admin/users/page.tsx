@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/authz";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 export default async function AdminUsersPage() {
+  await requireAdmin();
   const users = await prisma.user.findMany({
     include: { role: true, portfolio: true, investments: { where: { status: "ACTIVE" } } },
     orderBy: { createdAt: "desc" },
