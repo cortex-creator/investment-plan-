@@ -8,8 +8,8 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { AdjustBalanceForm } from "./AdjustBalanceForm";
 import { ToggleActiveButton } from "./ToggleActiveButton";
 
-export default async function AdminUserDetailPage({
-  await requireAdmin(); params }: { params: Promise<{ id: string }> }) {
+export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
 
   const user = await prisma.user.findUnique({
