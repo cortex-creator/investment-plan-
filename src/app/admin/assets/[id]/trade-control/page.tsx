@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/authz";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCandles } from "@/lib/candles";
@@ -7,6 +8,7 @@ import { formatCurrency, toNumber } from "@/lib/format";
 import { TickControls } from "./TickControls";
 
 export default async function AdminAssetTradeControlPage({
+  await requireAdmin();
   params,
 }: {
   params: Promise<{ id: string }>;
