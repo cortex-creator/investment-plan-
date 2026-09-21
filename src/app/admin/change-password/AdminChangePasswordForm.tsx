@@ -13,6 +13,10 @@ export function AdminChangePasswordForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      <div>
+        <Label htmlFor="current-password">Current temporary password</Label>
+        <Input id="current-password" name="currentPassword" type="password" autoComplete="current-password" required />
+      </div>
       {state.error && <Alert variant="danger">{state.error}</Alert>}
       <div>
         <Label htmlFor="new-password">New password</Label>
