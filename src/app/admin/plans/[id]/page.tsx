@@ -6,8 +6,8 @@ import { updatePlanAction } from "@/lib/actions/admin-plans";
 import { PlanForm, type PlanFormValues } from "../PlanForm";
 import { toNumber } from "@/lib/format";
 
-export default async function EditPlanPage({
-  await requireAdmin(); params }: { params: Promise<{ id: string }> }) {
+export default async function EditPlanPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const plan = await prisma.investmentPlan.findUnique({ where: { id } });
   if (!plan) notFound();
