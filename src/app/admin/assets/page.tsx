@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/authz";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -7,6 +8,7 @@ import { AssetPriceForm } from "./AssetPriceForm";
 import { ToggleAssetButton } from "./ToggleAssetButton";
 
 export default async function AdminAssetsPage() {
+  await requireAdmin();
   const assets = await prisma.asset.findMany({ orderBy: { symbol: "asc" } });
 
   return (
