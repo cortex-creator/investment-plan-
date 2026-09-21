@@ -14,13 +14,31 @@ export type FormState = {
   success?: boolean;
 };
 
+const ACTION_TIMEOUT_MS = 10000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = ACTION_TIMEOUT_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out. Please try again.")), timeoutMs)
+      ),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function ensureLocalUser(email: string, name: string, password?: string) {
   const normalizedEmail = email.toLowerCase();
 
-  const existing = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-    include: { role: true, portfolio: true },
-  });
+  const existing = await withTimeout(
+    prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: { role: true, portfolio: true },
+    })
+  );
 
   if (existing) {
     if (password) {
@@ -38,7 +56,7 @@ async function ensureLocalUser(email: string, name: string, password?: string) {
     return existing;
   }
 
-  const role = await prisma.role.findUnique({ where: { name: ROLE_USER } });
+  const role = await withTimeout(prisma.role.findUnique({ where: { name: ROLE_USER } }));
   if (!role) {
     throw new Error("Platform is not fully set up yet. Please contact support.");
   }
@@ -47,27 +65,32 @@ async function ensureLocalUser(email: string, name: string, password?: string) {
     ? await bcrypt.hash(password, 12)
     : await bcrypt.hash(crypto.randomUUID(), 12);
 
-  return prisma.user.create({
-    data: {
-      name,
-      email: normalizedEmail,
-      passwordHash,
-      roleId: role.id,
-      portfolio: {
-        create: {
-          cashBalance: STARTING_BALANCE,
-          totalDeposited: STARTING_BALANCE,
+  return withTimeout(
+    prisma.user.create({
+      data: {
+        name,
+        email: normalizedEmail,
+        passwordHash,
+        roleId: role.id,
+        portfolio: {
+          create: {
+            cashBalance: STARTING_BALANCE,
+            totalDeposited: STARTING_BALANCE,
+          },
+        },
+        notifications: {
+          create: {
+            type: "SUCCESS",
+            title: "Welcome",
+            message:
+              "Your account was created with a starting balance of $" +
+              STARTING_BALANCE.toLocaleString() +
+              ".",
+          },
         },
       },
-      notifications: {
-        create: {
-          type: "SUCCESS",
-          title: "Welcome",
-          message: "Your account was created with a starting balance of $" + STARTING_BALANCE.toLocaleString() + ".",
-        },
-      },
-    },
-  });
+    })
+  );
 }
 
 export async function signUpAction(
@@ -88,27 +111,30 @@ export async function signUpAction(
   const { name, email, password } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
-  const { error } = await neonAuth.signUp.email({
-    email: normalizedEmail,
-    password,
-    name,
-  });
-
-  if (error) {
-    return { error: error.message || "Unable to create your account." };
-  }
-
   try {
+    const result = await withTimeout(
+      neonAuth.signUp.email({
+        email: normalizedEmail,
+        password,
+        name,
+      })
+    );
+
+    if (result.error) {
+      return { error: result.error.message || "Unable to create your account." };
+    }
+
     await ensureLocalUser(normalizedEmail, name, password);
+    redirect("/dashboard");
   } catch (err) {
-    console.error("Local profile creation failed after Neon Auth signup", err);
+    console.error("Signup failed", err);
     return {
       error:
-        "Your authentication account was created, but your investment profile could not be initialized. Please contact support.",
+        err instanceof Error && err.message.includes("timed out")
+          ? "The authentication service is taking too long to respond. Please try again."
+          : "Unable to create your account. Please try again.",
     };
   }
-
-  redirect("/dashboard");
 }
 
 export async function loginAction(
@@ -127,27 +153,32 @@ export async function loginAction(
   const { email, password } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
-  const { error } = await neonAuth.signIn.email({
-    email: normalizedEmail,
-    password,
-  });
-
-  if (error) {
-    return { error: "Invalid email or password." };
-  }
-
   try {
+    const result = await withTimeout(
+      neonAuth.signIn.email({
+        email: normalizedEmail,
+        password,
+      })
+    );
+
+    if (result.error) {
+      return { error: "Invalid email or password." };
+    }
+
     const localUser = await ensureLocalUser(
       normalizedEmail,
       normalizedEmail.split("@")[0],
       password
     );
+
     redirect(localUser.role.name === "ADMIN" ? "/admin" : "/dashboard");
   } catch (err) {
-    console.error("Local profile synchronization failed after Neon Auth login", err);
+    console.error("Login failed", err);
     return {
       error:
-        "Authentication succeeded, but your investment profile could not be loaded. Please contact support.",
+        err instanceof Error && err.message.includes("timed out")
+          ? "The authentication service is taking too long to respond. Please try again."
+          : "Invalid email or password.",
     };
   }
 }
