@@ -46,7 +46,8 @@ model User {
   investments   UserInvestment[]
   transactions  Transaction[]
   notifications Notification[]
-  paperTrades   PaperTrade[]
+  paperTrades        PaperTrade[]
+  portfolioSnapshots PortfolioSnapshot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
