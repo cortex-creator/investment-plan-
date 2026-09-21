@@ -27,7 +27,10 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const handleSignOut = async () => {\n    await authClient.signOut();\n    window.location.href = "/";\n  };
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    window.location.href = "/";
+  };
 
   const nav = (
     <nav className="flex flex-1 flex-col gap-1 p-3">
