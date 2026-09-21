@@ -248,8 +248,13 @@ export async function changeAdminPasswordAction(
   _prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
+  const currentPassword = String(formData.get("currentPassword") ?? "");
   const newPassword = String(formData.get("newPassword") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (!currentPassword) {
+    return { error: "Please enter your current temporary password." };
+  }
 
   if (newPassword.length < 8) {
     return { error: "Your new password must be at least 8 characters." };
@@ -274,6 +279,7 @@ export async function changeAdminPasswordAction(
 
     const result = await withTimeout(
       neonAuth.changePassword({
+        currentPassword,
         newPassword,
         revokeOtherSessions: true,
       })
